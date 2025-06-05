@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 Budget Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2d3748;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.1;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            padding: 40px;
+            background: #f8fafc;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-color);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .summary-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .summary-card.income { --accent-color: #10b981; }
+        .summary-card.savings { --accent-color: #3b82f6; }
+        .summary-card.bills { --accent-color: #ef4444; }
+        .summary-card.discretionary { --accent-color: #8b5cf6; }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 20px;
+            background: var(--accent-color);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 40px;
+            padding: 40px;
+        }
+
+        .budget-table-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .table-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .budget-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .budget-table th,
+        .budget-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .budget-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .budget-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .category-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .amount {
+            font-weight: 700;
+            color: #059669;
+        }
+
+        .total-row {
+            background: #f1f5f9 !important;
+            font-weight: 700;
+        }
+
+        .total-row td {
+            border-top: 2px solid #cbd5e1;
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            height: fit-content;
+        }
+
+        .chart-header {
+            margin-bottom: 25px;
+        }
+
+        .chart-header h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
+        .actual-input {
+            width: 120px;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: border-color 0.2s ease;
+        }
+
+        .actual-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-cards {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary-cards {
+                padding: 20px;
+                gap: 15px;
+            }
+            
+            .main-content {
+                padding: 20px;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>💰 Budget Dashboard</h1>
+            <p class="subtitle">Financial Overview & Expense Tracking</p>
+        </div>
+
+        <div class="summary-cards">
+            <div class="summary-card income">
+                <div class="card-icon">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="card-title">Monthly Income</div>
+                <div class="card-value">$4,355.80</div>
+                <div class="card-subtitle">$52,269.60 annually</div>
+            </div>
+
+            <div class="summary-card savings">
+                <div class="card-icon">
+                    <i class="fas fa-piggy-bank"></i>
+                </div>
+                <div class="card-title">Savings Goal</div>
+                <div class="card-value">$653.37</div>
+                <div class="card-subtitle">15% of income</div>
+            </div>
+
+            <div class="summary-card bills">
+                <div class="card-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="card-title">Total Bills</div>
+                <div class="card-value">$3,285.00</div>
+                <div class="card-subtitle">Fixed expenses</div>
+            </div>
+
+            <div class="summary-card discretionary">
+                <div class="card-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="card-title">Discretionary</div>
+                <div class="card-value">$417.43</div>
+                <div class="card-subtitle">Remaining budget</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="budget-table-container">
+                <div class="table-header">
+                    <h2><i class="fas fa-list-alt" style="margin-right: 10px; color: #3b82f6;"></i>Budget Breakdown</h2>
+                </div>
+                
+                <table class="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Budgeted</th>
+                            <th>Actual</th>
+                            <th>Remaining</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="category-name">🏠 Rent / Utilities</td>
+                            <td class="amount">$1,450.00</td>
+                            <td><input type="number" class="actual-input" placeholder="$0.00" data-category="rent"></td>
+                            <td class="remaining" data-budget="1450">$1,450.00</td>
+                        </tr>
+                        <tr>
+                            <td class="category-name">💳 Credit Card</td>
+                            <td class="amount">$1,250.00</td>
+                            <td><input type="number" class="actual-input" placeholder="$0.00" data-category="credit"></td>
+                            <td class="remaining" data-budget="1250">$1,250.00</td>
+                        </tr>
+                        <tr>
+                            <td class="category-name">📱 T-Mobile</td>
+                            <td class="amount">$120.00</td>
+                            <td><input type="number" class="actual-input" placeholder="$0.00" data-category="phone"></td>
+                            <td class="remaining" data-budget="120">$120.00</td>
+                        </tr>
+                        <tr>
+                            <td class="category-name">🚗 Car Insurance/Taxes</td>
+                            <td class="amount">$65.00</td>
+                            <td><input type="number" class="actual-input" placeholder="$0.00" data-category="car"></td>
+                            <td class="remaining" data-budget="65">$65.00</td>
+                        </tr>
+                        <tr>
+                            <td class="category-name">📺 Subscriptions</td>
+                            <td class="amount">$200.00</td>
+                            <td><input type="number" class="actual-input" placeholder="$0.00" data-category="subs"></td>
+                            <td class="remaining" data-budget="200">$200.00</td>
+                        </tr>
+                        <tr>
+                            <td class="category-name">✈️ Travel / Gifts / Misc</td>
+                            <td class="amount">$200.00</td>
+                            <td><input type="number" class="actual-input" placeholder="$0.00" data-category="misc"></td>
+                            <td class="remaining" data-budget="200">$200.00</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td class="category-name">💰 SAVINGS</td>
+                            <td class="amount">$653.37</td>
+                            <td class="amount">Auto</td>
+                            <td class="amount">$653.37</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td class="category-name"><strong>TOTAL BILLS</strong></td>
+                            <td class="amount"><strong>$3,285.00</strong></td>
+                            <td class="amount"><strong id="totalActual">$0.00</strong></td>
+                            <td class="amount"><strong id="totalRemaining">$3,285.00</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="budgetProgress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                                <div class="chart-header">
+                    <h3><i class="fas fa-chart-pie" style="margin-right: 10px; color: #8b5cf6;"></i>Budget Visualization</h3>
+                    <p style="color: #64748b; font-size: 0.9rem;">Visual breakdown of your monthly budget</p>
+                </div>
+                
+                <div class="chart-wrapper">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Chart
+        const ctx = document.getElementById('budgetChart').getContext('2d');
+        const budgetChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'Rent/Utilities',
+                    'Credit Card',
+                    'Savings',
+                    'Subscriptions',
+                    'Travel/Misc',
+                    'T-Mobile',
+                    'Car Insurance',
+                    'Discretionary'
+                ],
+                datasets: [{
+                    data: [1450, 1250, 653.37, 200, 200, 120, 65, 417.43],
+                    backgroundColor: [
+                        '#ef4444',
+                        '#f97316',
+                        '#10b981',
+                        '#8b5cf6',
+                        '#06b6d4',
+                        '#3b82f6',
+                        '#84cc16',
+                        '#f59e0b'
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 15,
+                            font: {
+                                size: 11,
+                                weight: '600'
+                            },
+                            color: '#374151'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#374151',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const percentage = ((value / 4355.80) * 100).toFixed(1);
+                                return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    duration: 1000
+                }
+            }
+        });
+
+        // Budget tracking functionality
+        const actualInputs = document.querySelectorAll('.actual-input');
+        const remainingCells = document.querySelectorAll('.remaining');
+        const totalActual = document.getElementById('totalActual');
+        const totalRemaining = document.getElementById('totalRemaining');
+        const progressBar = document.getElementById('budgetProgress');
+
+        function updateBudgetTracking() {
+            let totalSpent = 0;
+            
+            actualInputs.forEach((input, index) => {
+                const actual = parseFloat(input.value) || 0;
+                const budget = parseFloat(remainingCells[index].dataset.budget);
+                const remaining = budget - actual;
+                
+                totalSpent += actual;
+                
+                // Update remaining amount
+                remainingCells[index].textContent = `$${remaining.toFixed(2)}`;
+                remainingCells[index].style.color = remaining >= 0 ? '#059669' : '#dc2626';
+                
+                // Add visual feedback for input
+                if (actual > budget) {
+                    input.style.borderColor = '#dc2626';
+                    input.style.backgroundColor = '#fef2f2';
+                } else if (actual > 0) {
+                    input.style.borderColor = '#059669';
+                    input.style.backgroundColor = '#f0fdf4';
+                } else {
+                    input.style.borderColor = '#e2e8f0';
+                    input.style.backgroundColor = '#ffffff';
+                }
+            });
+            
+            // Update totals
+            const totalBudget = 3285.00;
+            const totalRemainingAmount = totalBudget - totalSpent;
+            
+            totalActual.textContent = `$${totalSpent.toFixed(2)}`;
+            totalRemaining.textContent = `$${totalRemainingAmount.toFixed(2)}`;
+            totalRemaining.style.color = totalRemainingAmount >= 0 ? '#059669' : '#dc2626';
+            
+            // Update progress bar
+            const progressPercentage = Math.min((totalSpent / totalBudget) * 100, 100);
+            progressBar.style.width = `${progressPercentage}%`;
+            
+            if (progressPercentage > 100) {
+                progressBar.style.background = 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)';
+            } else if (progressPercentage > 80) {
+                progressBar.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
+            } else {
+                progressBar.style.background = 'linear-gradient(90deg, #10b981 0%, #059669 100%)';
+            }
+        }
+
+        // Add event listeners
+        actualInputs.forEach(input => {
+            input.addEventListener('input', updateBudgetTracking);
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    this.value = parseFloat(this.value).toFixed(2);
+                }
+            });
+        });
+
+        // Add some nice animations on load
+        window.addEventListener('load', function() {
+            const cards = document.querySelectorAll('.summary-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                    
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        });
+
+        // Format currency inputs
+        actualInputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.transform = 'scale(1.02)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

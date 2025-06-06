@@ -413,25 +413,25 @@
                 </div>
                 <div class="card-title">Savings Goal</div>
                 <div class="card-value">$653.37</div>
-                <div class="card-subtitle">15% of income</div>
+                <div class="card-subtitle">15% of income, $7840.44 annually</div>
             </div>
 
             <div class="summary-card bills">
                 <div class="card-icon">
                     <i class="fas fa-receipt"></i>
                 </div>
-                <div class="card-title">Total Bills</div>
+                <div class="card-title">Fixed Expenses</div>
                 <div class="card-value">$3,285.00</div>
-                <div class="card-subtitle">Fixed expenses</div>
+                <div class="card-subtitle">75% of income</div>
             </div>
 
             <div class="summary-card discretionary">
                 <div class="card-icon">
                     <i class="fas fa-coins"></i>
                 </div>
-                <div class="card-title">Discretionary</div>
+                <div class="card-title">Discretionary Funds</div>
                 <div class="card-value">$417.43</div>
-                <div class="card-subtitle">Remaining budget</div>
+                <div class="card-subtitle">10% of income</div>
             </div>
         </div>
 
@@ -492,6 +492,12 @@
                             <td class="amount">$653.37</td>
                             <td class="amount">Auto</td>
                             <td class="amount">$653.37</td>
+                        </tr>
+                        <tr class="total-row" style="background: #f0f9ff !important;">
+                            <td class="category-name"><strong>DISCRETIONARY</strong></td>
+                            <td class="amount"><strong>$417.43</strong></td>
+                            <td class="amount"><strong>Available</strong></td>
+                            <td class="amount"><strong id="discretionaryAmount">$417.43</strong></td>
                         </tr>
                         <tr class="total-row">
                             <td class="category-name"><strong>TOTAL BILLS</strong></td>
@@ -688,6 +694,63 @@
                 this.style.transform = 'scale(1)';
             });
         });
+        function updateBudgetTracking() {
+    let totalSpent = 0;
+    
+    actualInputs.forEach((input, index) => {
+        const actual = parseFloat(input.value) || 0;
+        const budget = parseFloat(remainingCells[index].dataset.budget);
+        const remaining = budget - actual;
+        
+        totalSpent += actual;
+        
+        // Update remaining amount
+        remainingCells[index].textContent = `$${remaining.toFixed(2)}`;
+        remainingCells[index].style.color = remaining >= 0 ? '#059669' : '#dc2626';
+        
+        // Add visual feedback for input
+        if (actual > budget) {
+            input.style.borderColor = '#dc2626';
+            input.style.backgroundColor = '#fef2f2';
+        } else if (actual > 0) {
+            input.style.borderColor = '#059669';
+            input.style.backgroundColor = '#f0fdf4';
+        } else {
+            input.style.borderColor = '#e2e8f0';
+            input.style.backgroundColor = '#ffffff';
+        }
+    });
+    
+    // Update totals
+    const totalBudget = 3285.00;
+    const totalRemainingAmount = totalBudget - totalSpent;
+    
+    totalActual.textContent = `$${totalSpent.toFixed(2)}`;
+    totalRemaining.textContent = `$${totalRemainingAmount.toFixed(2)}`;
+    totalRemaining.style.color = totalRemainingAmount >= 0 ? '#059669' : '#dc2626';
+    
+    // Update discretionary amount (base + any savings from underspending)
+    const baseDiscretionary = 417.43;
+    const additionalFromSavings = Math.max(0, totalRemainingAmount);
+    const totalDiscretionary = baseDiscretionary + additionalFromSavings;
+    
+    const discretionaryElement = document.getElementById('discretionaryAmount');
+    discretionaryElement.textContent = `$${totalDiscretionary.toFixed(2)}`;
+    discretionaryElement.style.color = '#8b5cf6';
+    
+    // Update progress bar
+    const progressPercentage = Math.min((totalSpent / totalBudget) * 100, 100);
+    progressBar.style.width = `${progressPercentage}%`;
+    
+    if (progressPercentage > 100) {
+        progressBar.style.background = 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)';
+    } else if (progressPercentage > 80) {
+        progressBar.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
+    } else {
+        progressBar.style.background = 'linear-gradient(90deg, #10b981 0%, #059669 100%)';
+    }
+}
+
     </script>
 </body>
 </html>
